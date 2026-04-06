@@ -1,4 +1,4 @@
-# Push to Docker Hub on every push to main, then optionally trigger Render deploy hook.
+# E2E on full Compose stack, then push image to Docker Hub and optionally trigger Render.
 # Required repo secrets: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN
 # Optional: RENDER_DEPLOY_HOOK_URL (from Render → Service → Settings → Deploy Hook)
 
@@ -10,7 +10,26 @@ on:
       - main
 
 jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare env for Compose
+        run: cp .env.example .env
+
+      - name: Run E2E (full stack)
+        run: make test-e2e
+
+      - name: Tear down Compose
+        if: always()
+        run: docker compose down -v || true
+
   build-push-deploy:
+    needs: e2e
     runs-on: ubuntu-latest
     permissions:
       contents: read
